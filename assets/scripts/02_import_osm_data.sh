@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MEMORY=12000  # change this to the memory you have available
+MEMORY=20000  # change this to the memory you have available
 DATA_FILE=/mnt/data/osmdata.pbf
 
 # Load data into database
