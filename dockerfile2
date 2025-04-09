@@ -1,0 +1,125 @@
+FROM ubuntu
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LC_ALL=en_US.UTF-8
+ENV LETSENCRYPT=0
+ENV EMAIL=admin@localserver.net
+ENV DOMAIN=otm-docker.example.io
+ENV WHITELIST=127.0.0.1
+ENV MOD_TILE_PREVENT_EXPIRATION=0
+
+# Update & install all packages in einem Schritt (mit Cleanup)
+RUN apt-get update && \
+    apt-get install -y \
+    sudo \
+    devscripts \
+    debhelper \
+    libjson-perl \
+    libipc-sharelite-perl \
+    libgd-perl \
+    git \
+    build-essential \
+    python3 \
+    python3-pip \
+    zlib1g-dev \
+    clang \
+    make \
+    pkg-config \
+    curl \
+    libmapnik3.0 \
+    libmapnik-dev \
+    mapnik-utils \
+    python3-mapnik \
+    unifont \
+    wget \
+    python3-certbot \
+    python3-certbot-apache \
+    openssh-server \
+    postgresql \
+    postgresql-10-postgis-2.4 \
+    apache2 \
+    autoconf \
+    apache2-dev \
+    cmake \
+    libbz2-dev \
+    libgeos-dev \
+    libpq-dev \
+    libproj-dev \
+    lua5.3 \
+    liblua5.3-dev \
+    rsyslog \
+    nano \
+    gdal-bin \
+    screen \
+    python3-setuptools \
+    python3-matplotlib \
+    python3-bs4 \
+    python3-gdal \
+    python3-numpy && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Locale einstellen
+RUN apt-get update && \
+    apt-get install -y locales && \
+    locale-gen en_US.UTF-8 && \
+    update-locale LANG=en_US.UTF-8
+
+# tirex installieren
+RUN git clone https://github.com/geofabrik/tirex /home/tirex && \
+    cd /home/tirex && \
+    make && make deb && \
+    dpkg -i tirex-core_0.6.1_amd64.deb \
+             tirex-backend-mapnik_0.6.1_amd64.deb \
+             tirex-syncd_0.6.1_amd64.deb
+
+# mod_tile + renderd installieren
+RUN git clone git://github.com/openstreetmap/mod_tile.git /home/mod_tile && \
+    cd /home/mod_tile && \
+    echo '/etc/renderd.conf' > debian/renderd.conffiles && \
+    debuild -i -b -us -uc && \
+    dpkg -i /home/libapache2-mod-tile_0.4-12~precise2_amd64.deb && \
+    mkdir /mnt/tiles && \
+    rm -rf /var/lib/tirex/tiles /var/lib/mod_tile && \
+    ln -s /mnt/tiles /var/lib/tirex/tiles && \
+    ln -s /mnt/tiles /var/lib/mod_tile
+
+# osm2pgsql installieren
+RUN mkdir -p /opt/osm2pgsql && \
+    git clone git://github.com/openstreetmap/osm2pgsql.git /opt/osm2pgsql/src && \
+    cd /opt/osm2pgsql/src && \
+    mkdir build && cd build && \
+    cmake .. && \
+    make && \
+    make install && \
+    rm -rf /opt/osm2pgsql
+
+# Beispielkarte installieren
+RUN dpkg -i /home/tirex-example-map_0.6.1_amd64.deb
+
+# phyghtmap installieren
+RUN wget http://katze.tfiu.de/projects/phyghtmap/phyghtmap_2.21-1_all.deb && \
+    dpkg -i phyghtmap_2.21-1_all.deb && \
+    rm phyghtmap_2.21-1_all.deb
+
+# Python3 als Standard setzen
+RUN ln -s /usr/bin/python3 /usr/bin/python
+
+# Python-Tools installieren
+RUN pip3 install --no-cache-dir gdown
+
+# nik4 installieren
+RUN wget -O /usr/local/bin/nik4.py https://raw.githubusercontent.com/Zverik/Nik4/master/nik4.py && \
+    chmod 755 /usr/local/bin/nik4.py
+
+# Apache-Module aktivieren (abhängig von assets)
+COPY assets /
+RUN a2dismod mpm_event && \
+    a2enmod mpm_prefork headers tile proxy proxy_http proxy_balancer ssl rewrite
+
+# Ports freigeben
+EXPOSE 80
+EXPOSE 443
+
+# Start-Skript setzen
+ENTRYPOINT ["/usr/local/bin/startup.sh"]
