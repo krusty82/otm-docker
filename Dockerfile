@@ -1,4 +1,5 @@
-FROM ubuntu
+
+FROM ubuntu:18.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -45,26 +46,27 @@ RUN apt-get install --yes locales && \
     echo locales locales/default_environment_locale select en_US.UTF-8 | debconf-set-selections  && \
     dpkg-reconfigure locales
 
-# install tirex
+# install tirex (at commit 9c52ce1 which was in March 2020)
 RUN git clone https://github.com/geofabrik/tirex /home/tirex && \
-    cd /home/tirex && make && make deb && cd /home && \
+    cd /home/tirex && git checkout 9c52ce1 && make && make deb && cd /home && \
     dpkg -i tirex-core_0.6.1_amd64.deb && \
     dpkg -i tirex-backend-mapnik_0.6.1_amd64.deb && \
     dpkg -i tirex-syncd_0.6.1_amd64.deb
 
-# install apache & mod_tile
-RUN git clone git://github.com/openstreetmap/mod_tile.git /home/mod_tile && \
-    cd /home/mod_tile && echo '/etc/renderd.conf' > debian/renderd.conffiles && debuild -i -b -us -uc && \
+# install apache & mod_tile (at commit fd5988f)
+RUN git clone https://github.com/openstreetmap/mod_tile.git /home/mod_tile && \
+    cd /home/mod_tile && git checkout fd5988f && echo '/etc/renderd.conf' > debian/renderd.conffiles && debuild -i -b -us -uc && \
     dpkg -i /home/libapache2-mod-tile_0.4-12~precise2_amd64.deb && \
     mkdir /mnt/tiles && rm -rf /var/lib/tirex/tiles && rm -rf /var/lib/mod_tile && ln -s /mnt/tiles /var/lib/tirex/tiles && ln -s /mnt/tiles /var/lib/mod_tile
 
 # install stuff for letsencrypt
-RUN cd /usr/local/bin && wget https://dl.eff.org/certbot-auto && chmod a+x certbot-auto
+# This is not supported anymore. Deactivating for now.
+# RUN cd /usr/local/bin && wget https://dl.eff.org/certbot-auto && chmod a+x certbot-auto
 
-# Install osm2pgsql from source
+# Install osm2pgsql from source (at commit 7892613)
 RUN	mkdir ~/osm2pgsql && cd ~/osm2pgsql && \
-	git clone git://github.com/openstreetmap/osm2pgsql.git && \
-	cd osm2pgsql && \
+	git clone https://github.com/openstreetmap/osm2pgsql.git && \
+	cd osm2pgsql && git checkout 7892613 && \
 	mkdir build && cd build && \
 	cmake .. && \
 	make && \
