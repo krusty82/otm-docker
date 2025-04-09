@@ -1,9 +1,9 @@
-version: '3.4'
+
 
 services:
   otm-docker:
-    image: jhassler/otm-docker:latest
-    container_name: otm-docker
+    image: otm-meins
+    container_name: otm-meins
     environment:
       - LETSENCRYPT=0
       - EMAIL=admin@this.srv
