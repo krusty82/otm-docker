@@ -8,19 +8,16 @@ if [ ! -d "/mnt/data/srtm" ]; then
   exit
 fi
 
-cd srtm
-for zipfile in *.zip; do unzip -j -o "$zipfile" -d unpacked; done
-mkdir original
-mv *.zip original/
 
-cd unpacked
+
+cd hgt
 for hgtfile in *.hgt; do gdal_fillnodata.py $hgtfile $hgtfile.tif; done
-rm -f *.hgt
+#rm -f *.hgt
 
 gdal_merge.py -n 32767 -co BIGTIFF=YES -co TILED=YES -co COMPRESS=LZW -co PREDICTOR=2 -o ../raw.tif *.hgt.tif
 
 cd ..
-rm -rf unpacked
+#rm -rf unpacked
 
 gdalwarp -co BIGTIFF=YES -co TILED=YES -co COMPRESS=LZW -co PREDICTOR=2 -t_srs epsg:3857 -r bilinear -tr 1000 1000 raw.tif warp-1000.tif
 gdalwarp -co BIGTIFF=YES -co TILED=YES -co COMPRESS=LZW -co PREDICTOR=2 -t_srs epsg:3857 -r bilinear -tr 5000 5000 raw.tif warp-5000.tif
