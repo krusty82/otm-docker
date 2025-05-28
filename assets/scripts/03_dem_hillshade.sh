@@ -25,8 +25,6 @@ rm -rf unpacked
 gdalwarp -co BIGTIFF=YES -co TILED=YES -co COMPRESS=LZW -co PREDICTOR=2 -t_srs epsg:3857 -r bilinear -tr 1000 1000 raw.tif warp-1000.tif
 gdalwarp -co BIGTIFF=YES -co TILED=YES -co COMPRESS=LZW -co PREDICTOR=2 -t_srs epsg:3857 -r bilinear -tr 5000 5000 raw.tif warp-5000.tif
 gdalwarp -co BIGTIFF=YES -co TILED=YES -co COMPRESS=LZW -co PREDICTOR=2 -t_srs epsg:3857 -r bilinear -tr 500 500 raw.tif warp-500.tif
-# 60m - just for contour lines
-gdalwarp -co BIGTIFF=YES -co TILED=YES -co COMPRESS=LZW -co PREDICTOR=2 -t_srs epsg:3857 -r bilinear -tr 60 60 raw.tif warp-60.tif
 # 30m - for the detail hillshade
 gdalwarp -co BIGTIFF=YES -co TILED=YES -co COMPRESS=LZW -co PREDICTOR=2 -t_srs epsg:3857 -r bilinear -tr 30 30 raw.tif warp-30.tif
 
