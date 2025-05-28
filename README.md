@@ -70,6 +70,8 @@ some regional extract. You can find a good list of servers in: https://wiki.open
 Download your PBF file and put it into your project `data/data` directory with the name `osmdata.pbf`.
 The script expects the data to have this name.
 
+Also put a poly-file into the folder named osm.poly. This is used to download the srtm data for the contour lines.
+
 
 ### Step 3: Download elevation data
 
