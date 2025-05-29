@@ -1,0 +1,90 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+
+# Basis-Installation
+RUN apt-get update && apt-get install -y \
+    sudo git curl wget nano screen rsyslog \
+    build-essential clang make cmake pkg-config autoconf \
+    zlib1g-dev libbz2-dev libgeos-dev libpq-dev libproj-dev \
+    libjson-perl libipc-sharelite-perl libgd-perl \
+    python3 python3-pip python3-setuptools \
+    python3-numpy python3-gdal python3-matplotlib python3-bs4 \
+    apache2 apache2-dev \
+    postgresql postgis postgresql-contrib \
+    libmapnik3.1 libmapnik-dev mapnik-utils \
+    lua5.3 liblua5.3-dev \
+    gdal-bin unifont locales
+
+# Lokalisierung / UTF-8
+RUN locale-gen en_US.UTF-8 && \
+    update-locale LANG=en_US.UTF-8
+
+# Certbot (per Snap)
+RUN apt-get install -y snapd && \
+    snap install core && snap refresh core && \
+    snap install --classic certbot && \
+    ln -s /snap/bin/certbot /usr/bin/certbot
+
+# tirex (z. B. Version 0.6.1)
+RUN git clone https://github.com/geofabrik/tirex /home/tirex && \
+    cd /home/tirex && make && make deb && cd /home && \
+    dpkg -i tirex-core_0.6.1_amd64.deb && \
+    dpkg -i tirex-backend-mapnik_0.6.1_amd64.deb && \
+    dpkg -i tirex-syncd_0.6.1_amd64.deb
+
+# mod_tile (z. B. Version 0.4)
+RUN git clone https://github.com/openstreetmap/mod_tile.git /home/mod_tile && \
+    cd /home/mod_tile && \
+    echo '/etc/renderd.conf' > debian/renderd.conffiles && \
+    debuild -i -b -us -uc && \
+    dpkg -i /home/libapache2-mod-tile_0.4-12~precise2_amd64.deb && \
+    mkdir /mnt/tiles && \
+    rm -rf /var/lib/tirex/tiles /var/lib/mod_tile && \
+    ln -s /mnt/tiles /var/lib/tirex/tiles && \
+    ln -s /mnt/tiles /var/lib/mod_tile
+
+# osm2pgsql (aus Source)
+RUN mkdir ~/osm2pgsql && cd ~/osm2pgsql && \
+    git clone https://github.com/openstreetmap/osm2pgsql.git && \
+    cd osm2pgsql && \
+    mkdir build && cd build && \
+    cmake .. && make && make install && \
+    rm -rf ~/osm2pgsql
+
+# phyghtmap
+RUN wget http://katze.tfiu.de/projects/phyghtmap/phyghtmap_2.21-1_all.deb && \
+    dpkg -i phyghtmap_2.21-1_all.deb || apt-get install -f -y
+
+# tirex-example-map installieren, falls vorhanden
+RUN dpkg -i /home/tirex-example-map_0.6.1_amd64.deb || true
+
+# Google Drive downloader
+RUN pip3 install gdown
+
+# nik4
+RUN wget -O /usr/local/bin/nik4.py https://raw.githubusercontent.com/Zverik/Nik4/master/nik4.py && \
+    chmod 755 /usr/local/bin/nik4.py
+
+# Projekt-Assets kopieren
+COPY assets /
+
+# Apache-Module aktivieren
+RUN a2dismod mpm_event && \
+    a2enmod mpm_prefork headers tile proxy proxy_http proxy_balancer ssl rewrite
+
+# Umgebungsvariablen
+ENV LETSENCRYPT=0
+ENV EMAIL=admin@localserver.net
+ENV DOMAIN=otm-docker.example.io
+ENV WHITELIST=127.0.0.1
+ENV MOD_TILE_PREVENT_EXPIRATION=0
+
+# Ports freigeben
+EXPOSE 80
+EXPOSE 443
+
+# Start-Skript
+ENTRYPOINT ["/usr/local/bin/startup.sh"]
