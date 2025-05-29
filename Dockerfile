@@ -36,6 +36,7 @@ RUN apt-get update && \
     rsyslog nano \
     gdal-bin \
     screen \
+    pyhgtmap \
     python-setuptools python3-matplotlib python-beautifulsoup python3-numpy python3-bs4 python3-gdal python-gdal
 
 # install locale so that postgres db is created with utf-8
